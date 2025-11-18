@@ -1,14 +1,11 @@
 import {ConfigDefaults, CsvConfigConst, DataItem, Options} from "./constants";
 
-declare global {
-	interface Navigator {
-		msSaveBlob: (blobOrBase64: Blob | string, filename: string) => void;
-	}
-}
+// Export types for library consumers
+export type { Options, DataItem } from "./constants";
 
 export class SimpleCsv {
 	public fileName: string | undefined;
-	public labels: Array<String> | undefined;
+	public labels: Array<string> | undefined;
 	public data: DataItem[];
 
 	private readonly _options: Options;
@@ -19,9 +16,14 @@ export class SimpleCsv {
 
 		this.data = typeof DataJSON != "object" ? JSON.parse(DataJSON) : DataJSON;
 
-		this._options = objectAssign({}, ConfigDefaults, config);
+		// Validate data is an array
+		if (!Array.isArray(this.data)) {
+			throw new TypeError("Data must be an array");
+		}
 
-		if (this._options.filename) {
+		this._options = Object.assign({}, ConfigDefaults, config);
+
+		if (filename) {
 			this._options.filename = filename;
 		}
 
@@ -32,6 +34,16 @@ export class SimpleCsv {
 	 * Generate and Download Csv
 	 */
 	private generateCsv(): any {
+		// Handle empty data
+		if (this.data.length === 0) {
+			console.warn("No data to generate CSV");
+			this.csv = "";
+			if (this._options.noDownload) {
+				return this.csv;
+			}
+			return;
+		}
+
 		if (this._options.useBom) {
 			this.csv += CsvConfigConst.BOM;
 		}
@@ -59,23 +71,15 @@ export class SimpleCsv {
 
 		let blob: Blob = new Blob([this.csv], {type: "text/csv;charset=utf8;"});
 
-		if (navigator.msSaveBlob) {
-			let filename = this._options.filename.replace(/ /g, "_") + ".csv";
-			navigator.msSaveBlob(blob, filename);
-		} else {
-			let link = document.createElement("a");
+		let link = document.createElement("a");
+		link.href = URL.createObjectURL(blob);
+		link.setAttribute("target", "_blank");
+		link.setAttribute("visibility", "hidden");
+		link.download = this._options.filename.replace(/ /g, "_") + ".csv";
 
-			// @ts-ignore
-			link.href = URL.createObjectURL(blob);
-
-			link.setAttribute("target", "_blank");
-			link.setAttribute("visibility", "hidden");
-			link.download = this._options.filename.replace(/ /g, "_") + ".csv";
-
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-		}
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
 	}
 
 	/**
@@ -166,7 +170,7 @@ export class SimpleCsv {
 			data = data.replace(/"/g, '""');
 			if (
 				this._options.quoteStrings ||
-				data.indexOf(",") > -1 ||
+				data.indexOf(this._options.fieldSeparator) > -1 ||
 				data.indexOf("\n") > -1 ||
 				data.indexOf("\r") > -1
 			) {
@@ -193,53 +197,7 @@ export class SimpleCsv {
 	 * @param {any} input
 	 */
 	static isFloat(input: any) {
-		return +input === input && (!isFinite(input) || Boolean(input % 1));
+		return +input === input && isFinite(input) && Boolean(input % 1);
 	}
 }
 
-let hasOwnProperty = Object.prototype.hasOwnProperty;
-let propIsEnumerable = Object.prototype.propertyIsEnumerable;
-
-/**
- * Convert to Object
- * @param {any} val
- */
-function toObject(val: any) {
-	if (val === null || val === undefined) {
-		throw new TypeError(
-			"Object.assign cannot be called with null or undefined"
-		);
-	}
-	return Object(val);
-}
-
-/**
- * Assign data  to new Object
- * @param {any}   target
- * @param {any[]} _source
- */
-function objectAssign(target: any, ..._source: any[]) {
-	let from: any;
-	let to = toObject(target);
-	let symbols: any;
-
-	for (let s = 1; s < arguments.length; s++) {
-		from = Object(arguments[s]);
-
-		for (const key in from) {
-			if (hasOwnProperty.call(from, key)) {
-				to[key] = from[key];
-			}
-		}
-
-		if ((<any>Object).getOwnPropertySymbols) {
-			symbols = (<any>Object).getOwnPropertySymbols(from);
-			for (let i = 0; i < symbols.length; i++) {
-				if (propIsEnumerable.call(from, symbols[i])) {
-					to[symbols[i]] = from[symbols[i]];
-				}
-			}
-		}
-	}
-	return to;
-}
