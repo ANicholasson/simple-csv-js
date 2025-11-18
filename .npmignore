@@ -1,0 +1,44 @@
+# Source files - only publish built files
+src/
+tsconfig.json
+rollup.config.mjs
+babel.config.js
+jest.config.ts
+
+# Test files
+*.test.ts
+*.test.js
+__tests__/
+coverage/
+
+# Development files
+.github/
+.git/
+.gitignore
+*.md
+!README.md
+!LICENSE
+
+# Build artifacts not needed
+*.tsbuildinfo
+.rpt2_cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Only include built library files
+# (everything in lib/ will be published as specified in package.json "files")
+
