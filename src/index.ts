@@ -179,16 +179,16 @@ export class SimpleCsv {
 			return data;
 		}
 
+		if (typeof data === "boolean") {
+			return data ? "TRUE" : "FALSE";
+		}
+
 		if (this._options.nullToEmptyString) {
 			if (data === null || data === undefined) {
 				return ("");
 			}
-			return data;
 		}
 
-		if (typeof data === "boolean") {
-			return data ? "TRUE" : "FALSE";
-		}
 		return data;
 	}
 
